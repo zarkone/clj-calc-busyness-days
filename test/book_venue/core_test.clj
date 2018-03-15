@@ -17,3 +17,38 @@
       (is
        (= 11
           (calculate-business-hours schedule #inst "2018-03-02T07:00" #inst "2018-03-05T12:00"))))))
+
+;; ----------------------
+
+(deftest separate-weekdays
+  (testing "Separate weekdays in schedule"
+    (let [schedule [{:schedule/weekdays #{1 2 3}
+                     :schedule/hours #{9 10 11 12 13 14 15 16}}
+
+                    {:schedule/weekdays #{4 5}
+                     :schedule/hours #{9 10 11 12 13 14}}]]
+      (is
+       (= 20
+          (calculate-business-hours schedule #inst "2018-02-28T07:00" #inst "2018-03-03T19:00"))))))
+
+(deftest separate-hours
+  (testing "Separate hours in schedule"
+    (let [schedule [{:schedule/weekdays #{1 2 3}
+                     :schedule/hours #{9 10}}
+
+                    {:schedule/weekdays #{1 2 3}
+                     :schedule/hours #{14 15 16}}]]
+      (is
+       (= 7
+          (calculate-business-hours schedule #inst "2018-03-05T10:00" #inst "2018-03-06T15:00"))))))
+
+(deftest one-day
+  (testing "Separate hours in schedule"
+    (let [schedule [{:schedule/weekdays #{1 2 3}
+                     :schedule/hours #{9 10}}
+
+                    {:schedule/weekdays #{1 2 3}
+                     :schedule/hours #{14 15 16}}]]
+      (is
+       (= 2
+          (calculate-business-hours schedule #inst "2018-03-05T10:00" #inst "2018-03-05T15:00"))))))
