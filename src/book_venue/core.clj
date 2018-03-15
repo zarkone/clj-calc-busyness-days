@@ -52,49 +52,12 @@
          (map schedule-part-to-map
               schedule)))
 
-(schedule-to-map [{:schedule/weekdays #{1 2 3}
-                   :schedule/hours #{9 10 11 12 13 14 15 16}}
-                  {:schedule/weekdays #{4 5}
-                   :schedule/hours #{9 10 11 12 13 14}}])
-
-(schedule-to-map [{:schedule/weekdays #{1 2 3}
-                   :schedule/hours #{9 10}}
-
-                  {:schedule/weekdays #{1 2 3}
-                   :schedule/hours #{14 15 16}}])
-;; {1 #{15 9 14 16 10}, 3 #{15 9 14 16 10}, 2 #{15 9 14 16 10}}
 
 (defn make-calc-business-hours-for-day [schedule-map]
   (fn [[weekday hours]]
     (when-let [busyness-hours (get schedule-map weekday)]
        [weekday (set/intersection busyness-hours hours)])))
 
-(let [schedule-map (schedule-to-map [{:schedule/weekdays #{1 2 3}
-                                      :schedule/hours #{9 10}}
-
-                                     {:schedule/weekdays #{1 2 3}
-                                      :schedule/hours #{14 15 16}}])
-      days (days-between
-            (tc/from-date #inst "2018-03-04T07:00")
-            (tc/from-date #inst "2018-03-06T12:00")
-            )
-      ]
-  (->> days
-       (map (make-calc-business-hours-for-day schedule-map))
-       (remove nil?)
-       (reduce #(+ %1 (-> %2 second count)) 0)))
-(sort
- (cut-last-day (tc/from-date #inst "2018-03-02T12:00")
-               (cut-first-day (tc/from-date #inst "2018-03-02T07:00") (set (range 0 24)))))
-
-(t/hour (tc/from-date #inst "2018-03-02T07:00"))
-(t/hours (tc/from-date #inst "2018-03-02T07:00"))
-
-(days-between
- (tc/from-date #inst "2018-03-02T07:00")
- (tc/from-date #inst "2018-03-03T12:00")
- )
-;; ([5 #{7 20 15 21 13 22 17 12 23 19 11 9 14 16 10 18 8}] [6 #{0 7 1 4 6 3 2 11 9 5 10 8}])
 
 (defn calculate-business-hours [schedule start-date end-date]
   (let [schedule-map (schedule-to-map schedule)
