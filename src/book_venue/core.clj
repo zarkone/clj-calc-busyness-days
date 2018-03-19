@@ -29,11 +29,22 @@
                (set (range 0 hour))
                hours)]])))
 
+(defn at-midnight? [date]
+  (= 0
+     (t/hour date)
+     (t/minute date)
+     (t/second date)))
+
+(defn- maybe-inc-days [days date]
+  (if (at-midnight? date)
+    (inc days)
+    days))
 
 (defn- days-between [start-date end-date]
   (let [days (-> start-date
                  (t/interval end-date)
-                 (t/in-days))]
+                 (t/in-days)
+                 (maybe-inc-days end-date))]
     (->> (range 0 (inc days))
          (map (comp #(vector % (set (range 0 24)))
                     #(to-weekday start-date %)))

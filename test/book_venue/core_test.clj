@@ -52,3 +52,12 @@
       (is
        (= 2
           (calculate-business-hours schedule #inst "2018-03-05T10:00" #inst "2018-03-05T15:00"))))))
+
+;;;; -----------------
+
+(deftest eventum1
+  (testing "Eventum test1"
+    (let [schedule [{:schedule/weekdays #{6} :schedule/hours #{7}}]]
+      (is
+       (= 1
+          (calculate-business-hours schedule #inst"2000-01-01T01:00" #inst"2000-01-02T00:00"))))))
