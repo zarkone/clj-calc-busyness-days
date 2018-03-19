@@ -79,3 +79,26 @@
          (remove nil?)
          (reduce #(+ %1 (-> %2 second count)) 0)
          )))
+
+(defn calculate-date [schedule from business-hours]
+  (let [start-date (tc/from-date from)
+        with-added-hours (t/plus start-date (t/hours business-hours))
+        with-added-hours-weekday (t/day-of-week with-added-hours)
+        schedule-map (schedule-to-map schedule)]
+    (-> with-added-hours
+        (tc/to-date))
+    ))
+
+
+
+(let [schedule [{:schedule/weekdays #{1 2 3 4 5}
+                     :schedule/hours #{16}}]]
+  (calculate-date schedule #inst"2018-03-16T01:00:00" 8))
+
+
+
+;; 1. date fits schedule day and hours
+;; 2. date fits schedule day but not hours, before
+;; 3. date fits schedule day but not hours, after
+;; 4. date doesn't fit schedule day, need to seek till next suitable weekday
+;;    and count days

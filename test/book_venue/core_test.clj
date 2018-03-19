@@ -61,3 +61,43 @@
       (is
        (= 1
           (calculate-business-hours schedule #inst"2000-01-01T01:00" #inst"2000-01-02T00:00"))))))
+
+
+;;; ----------- Task 3 ---------------
+
+(deftest task-3-1
+  (testing "task-3-1"
+    (let [schedule [{:schedule/weekdays #{1 2 3 4 5}
+                     :schedule/hours #{9 10 11 12 13 14 15 16}}]]
+      (is
+       (= #inst"2018-03-16T10:00:00.000-00:00"
+          (calculate-date schedule #inst"2018-03-16T01:00:00" 1))))))
+
+
+(deftest task-3-2
+  (testing "task-3-2"
+    (let [schedule [{:schedule/weekdays #{1 2 3 4 5}
+                     :schedule/hours #{9 10 11 12 13 14 15 16}}]]
+      (is
+       (= #inst "2018-03-20T09:00:00.000-00:00"
+          (calculate-date schedule #inst"2018-03-16T01:00:00" 16)
+          )))))
+
+
+(deftest task-3-3
+  (testing "task-3-3"
+    (let [schedule [{:schedule/weekdays #{1 2 3 4 5}
+                     :schedule/hours #{16}}]]
+      (is
+       (= #inst"2018-03-28T16:00:00.000-00:00"
+          (calculate-date schedule #inst"2018-03-16T01:00:00" 8))))))
+
+(deftest task-3-4
+  (testing "task-3-4"
+    (let [schedule [{:schedule/weekdays #{5}
+                     :schedule/hours #{9 10 11 12 13 14 15 16}}
+                    {:schedule/weekdays #{4}
+                     :schedule/hours #{17}}]]
+      (is
+       (= #inst"2018-03-22T17:00:00.000-00:00"
+          (calculate-date schedule #inst"2018-03-16T01:00:00" 8))))))
