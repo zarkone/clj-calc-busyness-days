@@ -73,3 +73,60 @@ Examples
 ```
 
 Please ignore any timezone related issues. Just assume everything is UTC
+
+
+## Task 3: Date and time calculations 2
+
+### Description
+
+This is an extension of `Task 2` with a slightly different use case.
+
+Instead of calculating the number of business hours that has elapsed, we want to know what date (which must be a valid "business hour") a given input of schedule, start-date and X business hours falls on.
+
+
+### Objective
+
+Implement a function `calculate-date` with the following signature
+
+```clojure
+(defn calculate-date
+  [schedule from business-hours])
+```
+
+#### Parameters
+
+- `schedule`  Same specification as in task 2
+- `from` Any valid #inst
+- `business-hours` Number of business hours (long)
+
+#### Return value
+
+ `#inst` that falls within given schedule after X business hours has elapsed
+
+
+### Examples
+
+```clojure
+
+(let [schedule [{:schedule/weekdays #{1 2 3 4 5}
+                 :schedule/hours #{9 10 11 12 13 14 15 16}}]]
+  (calculate-date schedule #inst"2018-03-16T01:00:00" 1))
+=> #inst"2018-03-16T10:00:00.000-00:00"
+
+(let [schedule [{:schedule/weekdays #{1 2 3 4 5}
+                 :schedule/hours #{9 10 11 12 13 14 15 16}}]]
+  (calculate-date schedule #inst"2018-03-16T01:00:00" 16))
+=> #inst"2018-03-20T09:00:00.000-00:00"
+
+(let [schedule [{:schedule/weekdays #{1 2 3 4 5}
+                 :schedule/hours #{16}}]]
+  (calculate-date schedule #inst"2018-03-16T01:00:00" 8))
+=> #inst"2018-03-28T16:00:00.000-00:00"
+
+(let [schedule [{:schedule/weekdays #{5}
+                 :schedule/hours #{9 10 11 12 13 14 15 16}}
+                {:schedule/weekdays #{4}
+                 :schedule/hours #{17}}]]
+  (calculate-date schedule #inst"2018-03-16T01:00:00" 8))
+=> #inst"2018-03-22T17:00:00.000-00:00"
+```
