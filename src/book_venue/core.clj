@@ -80,16 +80,95 @@
          (reduce #(+ %1 (-> %2 second count)) 0)
          )))
 
+;; Task 3
+
+(defn- drop-till-next-suitable-weekday [weekday sorted-suitable-weekdays]
+  (let [dropped (drop-while #(> weekday %) sorted-suitable-weekdays)]
+    (set
+     (if (empty? dropped)
+       sorted-suitable-weekdays
+       dropped))))
+
+(defn- calc-next-suitable-weekday [date schedule-map]
+  (let [weekday (t/day-of-week date)]
+    (->> schedule-map
+         keys
+         sort
+         (drop-till-next-suitable-weekday weekday)
+         first
+         )))
+
+
+;; (t/day-of-week (t/plus (t/today) (t/days 4)))
+#_(calc-suitable-weekdays (t/plus (t/today) (t/days 5))
+                            (schedule-to-map
+                             [{:schedule/weekdays #{1 5}
+                               :schedule/hours #{9 10 11 12 13 14 15 16}}
+                              {:schedule/weekdays #{4}
+                               :schedule/hours #{17}}]))
+
+(defn- maybe-add-week [weekday-to-forward date-weekday]
+  (if (< weekday-to-forward date-weekday)
+    (+ 7 weekday-to-forward)
+    weekday-to-forward))
+
+(defn- forward-till-weekday [weekday-to-forward date]
+  (let [date-weekday (t/day-of-week date)]
+    (->> date-weekday
+         (- (maybe-add-week weekday-to-forward date-weekday))
+         (t/days)
+         (t/plus date)
+         (t/with-time-at-start-of-day)
+         )))
+
+;; (defn- take-next-suitable-date [date schedule-map]
+;;   (let [weekday (t/day-of-week date)
+;;         next-suitable-weekday ()])
+;;   ())
+
+
+
+(defn- maybe-suitable-date [date schedule-map]
+  (let [weekday (t/day-of-week date)
+        hour (t/hour date)
+        suitable-hours (get schedule-map weekday)]
+    (when (not (empty? suitable-hours))
+      (when-let [suitable-hour (->> (sort suitable-hours)
+                                    (drop-while #(> hour %))
+                                    first)]
+        (->> (- (inc suitable-hour) hour)
+             (t/hours)
+             (t/plus date))))))
+
+
+
 (defn calculate-date [schedule from business-hours]
   (let [start-date (tc/from-date from)
-        with-added-hours (t/plus start-date (t/hours business-hours))
-        with-added-hours-weekday (t/day-of-week with-added-hours)
-        schedule-map (schedule-to-map schedule)]
-    (-> with-added-hours
-        (tc/to-date))
+        schedule-map (schedule-to-map schedule)
+        with-added-hours (->> business-hours
+                              t/hours
+                              (t/plus start-date))]
+
+    (if-let [with-added-hours-suitable (maybe-suitable-date with-added-hours schedule-map)]
+      (tc/to-date with-added-hours-suitable)
+      (let [next-day (-> with-added-hours
+                         (t/plus (t/days 1))
+                         (t/with-time-at-start-of-day))
+            suitable-weekday (calc-next-suitable-weekday next-day schedule-map)]
+        ;; (println suitable-weekday)
+        (-> suitable-weekday
+            (forward-till-weekday next-day)
+            ;; (maybe-suitable-date schedule-map)
+            (tc/to-date)
+            )))
     ))
 
 
+(schedule-to-map
+ [{:schedule/weekdays #{5}
+   :schedule/hours #{9 10 11 12 13 14 15 16}}
+  {:schedule/weekdays #{4}
+   :schedule/hours #{17}}])
 
 (let [schedule [{:schedule/weekdays #{1 2 3 4 5}
                      :schedule/hours #{16}}]]
