@@ -102,76 +102,48 @@
   ([schedule-map n]
    (let [weekdays (-> schedule-map keys sort)
          next-weekday (nth weekdays (mod n (count weekdays)))
-         weekday-schedule (get schedule-map next-weekday)]
+         weekday-schedule (-> schedule-map (get next-weekday) sort)]
      (lazy-seq
       (cons [next-weekday weekday-schedule]
             (busyness-days-seq schedule-map (inc n)))))))
 
 
+(defn- busyness-days-from-date [start-date schedule-map]
+  (->> (busyness-days-seq schedule-map)
+       (drop-while #(not= (first %)
+                          (t/day-of-week start-date)))))
+
+
 (defn calculate-date [schedule from business-hours]
   (let [start-date (tc/from-date from)
         schedule-map (schedule-to-map schedule)
-
-        busyness-days (->> (busyness-days-seq schedule-map)
-                           (drop-while #(not= (first %)
-                                              (t/day-of-week start-date))))]
+        busyness-days (busyness-days-from-date start-date schedule-map)
+        init-reduce-state {:finish-date start-date, :busyness-hours business-hours}]
     (->> busyness-days
          (reduce (fn [{:keys [busyness-hours finish-date] :as state}
                      [next-weekday next-schedule]]
-                   (println [next-weekday next-schedule])
                    (if (= 0 busyness-hours)
-                     (->> (sort next-schedule)
-                          first
-                          (t/hours)
-                          (t/plus (t/with-time-at-start-of-day
-                                    (forward-till-weekday next-weekday finish-date)
-                                    ))
-                          (reduced)
-                          )
+                     (let [next-busyness-day (forward-till-weekday next-weekday finish-date)]
+                       (->> next-schedule
+                            (first)
+                            (t/hours)
+                            (t/plus next-busyness-day)
+                            (reduced)))
                      (let [next-hours (count next-schedule)]
                        (if (> next-hours busyness-hours)
-                         (let [next-hour (-> next-schedule sort (nth busyness-hours))]
+                         (let [next-hour (nth next-schedule busyness-hours)]
                            (-> (t/with-time-at-start-of-day finish-date)
                                (t/plus (t/hours next-hour))
-                               (reduced)
-                               ))
+                               (reduced)))
                          (-> state
                              (update :finish-date #(forward-till-weekday next-weekday %))
-                             (update :busyness-hours #(- % (count next-schedule)))
-                             ))
-                       )))
-                 {:finish-date start-date
-                  :busyness-hours business-hours}
-                 )
-         (tc/to-date)
-         )
+                             (update :busyness-hours #(- % (count next-schedule))))))))
+                 init-reduce-state)
+         (tc/to-date))))
 
-
-    ))
 
 (let [schedule [{:schedule/weekdays #{5}
-                     :schedule/hours #{9 10 11 12 13 14 15 16}}
-                    {:schedule/weekdays #{4}
-                     :schedule/hours #{17}}]]
-      (calculate-date schedule #inst"2018-03-16T01:00:00" 8))
-
-#_(let [schedule [{:schedule/weekdays #{1 2 3 4 5}
-                 :schedule/hours #{15 14 13 16}}]]
-
-  (calculate-date schedule #inst"2018-03-16T01:00:00" 6))
-
-
-#_(let [schedule [{:schedule/weekdays #{1 2}
-                 :schedule/hours #{9 10 }}
-                {:schedule/weekdays #{5}
                  :schedule/hours #{9 10 11 12 13 14 15 16}}
                 {:schedule/weekdays #{4}
                  :schedule/hours #{17}}]]
   (calculate-date schedule #inst"2018-03-16T01:00:00" 8))
-
-
-;; 1. date fits schedule day and hours
-;; 2. date fits schedule day but not hours, before
-;; 3. date fits schedule day but not hours, after
-;; 4. date doesn't fit schedule day, need to seek till next suitable weekday
-;;    and count days
