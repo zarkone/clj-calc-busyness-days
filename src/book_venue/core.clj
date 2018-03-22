@@ -77,10 +77,10 @@
     (->> days
          (map (make-calc-business-hours-for-day schedule-map))
          (remove nil?)
-         (reduce #(+ %1 (-> %2 second count)) 0)
-         )))
+         (reduce #(+ %1 (-> %2 second count)) 0))))
 
 
+;; Task 3
 
 (defn- maybe-add-week [weekday-to-forward date-weekday]
   (if (< weekday-to-forward date-weekday)
@@ -93,8 +93,7 @@
          (- (maybe-add-week weekday-to-forward date-weekday))
          (t/days)
          (t/plus date)
-         (t/with-time-at-start-of-day)
-         )))
+         (t/with-time-at-start-of-day))))
 
 
 (defn busyness-days-seq
@@ -110,19 +109,31 @@
 
 (defn- busyness-days-from-date [start-date schedule-map]
   (->> (busyness-days-seq schedule-map)
-       (drop-while #(not= (first %)
-                          (t/day-of-week start-date)))))
+       (drop-while #(< (first %)
+                       (t/day-of-week start-date)))))
 
+(defn normalize-start-date [from schedule-map]
+  (let [start-date (->> from tc/from-date)
+        schedule-weekdays (-> schedule-map keys sort)
+        start-weekday (t/day-of-week start-date)
+        next-weekday (or (->> schedule-weekdays
+                              (drop-while #(< % start-weekday))
+                              first)
+                         (first schedule-weekdays))]
+    (if-not (get schedule-map start-weekday)
+      (forward-till-weekday next-weekday start-date)
+      start-date)))
 
 (defn calculate-date [schedule from business-hours]
-  (let [start-date (tc/from-date from)
-        schedule-map (schedule-to-map schedule)
+  (let [schedule-map (schedule-to-map schedule)
+        start-date (normalize-start-date from schedule-map)
         busyness-days (busyness-days-from-date start-date schedule-map)
         init-reduce-state {:finish-date start-date, :busyness-hours business-hours}]
+    (println (take 3 busyness-days))
     (->> busyness-days
          (reduce (fn [{:keys [busyness-hours finish-date] :as state}
                      [next-weekday next-schedule]]
-                   (if (= 0 busyness-hours)
+                   (if (>= 0 busyness-hours)
                      (let [next-busyness-day (forward-till-weekday next-weekday finish-date)]
                        (->> next-schedule
                             (first)
@@ -142,8 +153,8 @@
          (tc/to-date))))
 
 
-(let [schedule [{:schedule/weekdays #{5}
+#_(let [schedule [{:schedule/weekdays #{5}
                  :schedule/hours #{9 10 11 12 13 14 15 16}}
                 {:schedule/weekdays #{4}
                  :schedule/hours #{17}}]]
-  (calculate-date schedule #inst"2018-03-16T01:00:00" 8))
+  (calculate-date schedule #inst"2018-03-16T01:00:00" 3))

@@ -101,3 +101,13 @@
       (is
        (= #inst"2018-03-22T17:00:00.000-00:00"
           (calculate-date schedule #inst"2018-03-16T01:00:00" 8))))))
+
+(deftest task-3-5
+  (testing "task-3-5"
+    (let [schedule [{:schedule/weekdays #{5}
+                 :schedule/hours #{9 10 11 12 13 14 15 16}}
+                {:schedule/weekdays #{4}
+                 :schedule/hours #{17}}]]
+      (is
+       (= #inst "2018-03-23T09:00:00.000-00:00"
+          (calculate-date schedule #inst"2018-03-17T01:00:00" 1))))))
