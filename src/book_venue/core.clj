@@ -124,37 +124,45 @@
       (forward-till-weekday next-weekday start-date)
       start-date)))
 
+
+(defn- calc-overflow-day [next-schedule next-weekday finish-date]
+  (let [next-busyness-day (forward-till-weekday next-weekday finish-date)]
+    (->> next-schedule
+         (first)
+         (t/hours)
+         (t/plus next-busyness-day))))
+
+
+(defn- calc-final-day [next-schedule busyness-hours finish-date]
+  (let [next-hour (nth next-schedule busyness-hours)]
+    (-> finish-date
+        (t/with-time-at-start-of-day)
+        (t/plus (t/hours next-hour)))))
+
+
+(defn- forward-busyness-hours
+  [{:keys [busyness-hours finish-date] :as state}
+   [next-weekday next-schedule]]
+  (if (>= 0 busyness-hours)
+    (->> finish-date
+         (calc-overflow-day next-schedule next-weekday)
+         (reduced))
+    (let [next-hours (count next-schedule)]
+      (if (> next-hours busyness-hours)
+        (->> finish-date
+             (calc-final-day next-schedule busyness-hours)
+             (reduced))
+        (-> state
+            (update :finish-date #(forward-till-weekday next-weekday %))
+            (update :busyness-hours #(- % (count next-schedule))))))))
+
+
 (defn calculate-date [schedule from business-hours]
   (let [schedule-map (schedule-to-map schedule)
         start-date (normalize-start-date from schedule-map)
-        busyness-days (busyness-days-from-date start-date schedule-map)
-        init-reduce-state {:finish-date start-date, :busyness-hours business-hours}]
-    (println (take 3 busyness-days))
+        busyness-days (busyness-days-from-date start-date schedule-map)]
     (->> busyness-days
-         (reduce (fn [{:keys [busyness-hours finish-date] :as state}
-                     [next-weekday next-schedule]]
-                   (if (>= 0 busyness-hours)
-                     (let [next-busyness-day (forward-till-weekday next-weekday finish-date)]
-                       (->> next-schedule
-                            (first)
-                            (t/hours)
-                            (t/plus next-busyness-day)
-                            (reduced)))
-                     (let [next-hours (count next-schedule)]
-                       (if (> next-hours busyness-hours)
-                         (let [next-hour (nth next-schedule busyness-hours)]
-                           (-> (t/with-time-at-start-of-day finish-date)
-                               (t/plus (t/hours next-hour))
-                               (reduced)))
-                         (-> state
-                             (update :finish-date #(forward-till-weekday next-weekday %))
-                             (update :busyness-hours #(- % (count next-schedule))))))))
-                 init-reduce-state)
+         (reduce forward-busyness-hours
+                 {:finish-date start-date
+                  :busyness-hours business-hours})
          (tc/to-date))))
-
-
-#_(let [schedule [{:schedule/weekdays #{5}
-                 :schedule/hours #{9 10 11 12 13 14 15 16}}
-                {:schedule/weekdays #{4}
-                 :schedule/hours #{17}}]]
-  (calculate-date schedule #inst"2018-03-16T01:00:00" 3))
